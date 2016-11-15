@@ -21,7 +21,7 @@ fun apply_on_nth_char f n s = if n < 0 orelse n >= size(s)
 local
   fun head s = String.sub(s, 0);
 
-  fun tail s = String.substring(s, 1, size s - 1);
+  fun tail s = String.substring(s, 1, size s - 1); (* TODO - check if substring is legal*)
 
   fun braces_to_int #")" = ~1
       | braces_to_int #"(" = 1
@@ -34,8 +34,12 @@ in
   fun balance s = balance_aux(s, 0);
 end;
 
+
+(* All of the following functions don't necessarily have any logical meaning. *)
+(* These are just examples of possible function signatures in ML *)
+
 (* 'a->'b->('a * 'b ->'b)->'b *)
-fun sig1 x y (f : 'a * 'b -> 'b) = f(x, y);
+fun sig1 x y f = f(x, f(x, y));
 
 (* int * real -> (real -> string) -> bool *)
 fun sig2 (n, x) f = f(x/2.0)=str(chr(n));
