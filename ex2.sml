@@ -11,17 +11,20 @@ fun dubchar c = str(c) ^ str(c);
 
 (* Gets a char -> 'a function, n - index in string, and a string s and applies f
    on n-th character in string s *)
-fun apply_on_nth_char f n s = if n < 0 orelse n >= size(s)
-    then
-       f(#"!")
-    else
-       f(String.sub(s, n));
+fun apply_on_nth_char f n s = if n < 0 orelse n >= size(s) then f(#"!")
+    else f(String.sub(s, n));
 
+(* balance function *)
 (* Checks whether string s contains valid sequence of parentheses *)
 local
+  (* My own substring with allowed functions and assumption,
+   that from and to are valid. Similar to String.substring *)
+  fun substr(s, from, to) = if from>to then ""
+      else str(String.sub(s,from)) ^ substr(s, from+1, to);
+
   fun head s = String.sub(s, 0);
 
-  fun tail s = String.substring(s, 1, size s - 1); (* TODO - check if substring is legal*)
+  fun tail s = substr(s, 1, size s - 1);
 
   fun braces_to_int #")" = ~1
       | braces_to_int #"(" = 1
