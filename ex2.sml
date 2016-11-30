@@ -17,8 +17,6 @@ fun apply_on_nth_char f n s = if n < 0 orelse n >= size(s) then f(#"!")
 (* balance function *)
 (* Checks whether string s contains valid sequence of parentheses *)
 local
-  (* My own substring with allowed functions and assumption,
-   that from and to are valid. Similar to String.substring *)
   fun substr(s, from, to) = if from>to then ""
       else str(String.sub(s,from)) ^ substr(s, from+1, to);
 
