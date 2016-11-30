@@ -30,6 +30,9 @@ fun break_to_seq [] = []
     seq::break_to_seq(drop(length(seq), lst))
   end;
 
+(* Gets some compare function, e.g. op< and a list *)
+(* Returns maximal element according to definition of less *)
+(* example: max(op>, lst) will return minimal element *)
 fun max(_, [x]) = x
 | max(less, x::xs) = let
   val tail_largest = max(less,xs)
@@ -42,3 +45,9 @@ fun sequence [] = []
 
 fun thin [] = []
 | thin(x::xs) = (x, occurences(x,x::xs))::thin(List.filter (fn y => not (y=x)) xs)
+
+fun neighbours_aux ((0,_,_,_),(_,_,0,_)) = true
+| neighbours_aux ((_,0,_,_),(_,_,_,0)) = true
+| neighbours_aux (_,_) = false;
+
+fun are_nighbours (a,b) = neighbours_aux(a,b) orelse neighbours_aux(b,a);
