@@ -10,10 +10,6 @@ local (* Part 1 helpers *)
       else common_aux(common_x, max_occurences, xs)
     end;
 
-  fun transp ([]::_) = []
-  | transp rows =
-  (map hd rows) :: transp (map tl rows);
-
   (**)
   (* TODO may exctract x2=x1+1 *)
   fun first_seq [] = []
@@ -39,23 +35,28 @@ local (* Part 1 helpers *)
     if less(x, tail_largest) then tail_largest else x
   end;
 in
+  (* For list, returns most common element in that list
+     Example: common [“PL”, “PL”, “is”, “fun”, “PL”] = “PL” *)
   fun common (x::xs) = common_aux(x, 1, x::xs);
 
+  (* For list of integers returns longest increasing by 1 sequence
+     Example: sequence[1,2,3,4,1,5,5] = [1,2,3,4] *)
   fun sequence [] = []
   | sequence lst = max((fn(x,y) => length(x)<length(y)), break_to_seq(lst));
 
+  (* For list of elements returns list of all-unique pairs
+     of (element, occurences of element)
+     Example: thin [3,3,2,7,5,7,5] = [(3,2), (2,1), (7,2), (5, 2)] *)
   fun thin [] = []
   | thin(x::xs) = (x, occurences(x,x::xs))::thin(List.filter (fn y => y<>x) xs);
 end;
 
 
 local (* All maze functions helpers *)
-  fun row_is_valid [] = true
-  | row_is_valid [x] = true
-  | row_is_valid(x1::x2::xs) = are_nighbours(x1,x2) andalso row_is_valid(x2::xs);
 
-  fun rows_valid [] = true
-  | rows_valid(x::xs) = row_is_valid x andalso rows_valid xs;
+  fun transp ([]::_) = []
+  | transp rows =
+  (map hd rows) :: transp (map tl rows);
 
   (*
   x - line index, y - column index. Example:
@@ -74,7 +75,8 @@ local (* All maze functions helpers *)
     : ((int * int) * string) list
   *)
   fun enumerate2d(_,_, []) = []
-  | enumerate2d(x,y,row::rows)  =  enumerate2d_row(x, 0, row) @ (enumerate2d(x+1,y,rows))
+  | enumerate2d(x,y,row::rows) = enumerate2d_row(x, 0, row) @
+    (enumerate2d(x+1,y,rows))
 
   (* l t r b = left top right bottom
   coords_room_to_node((4,5), (1,0,0,1));
@@ -86,7 +88,8 @@ local (* All maze functions helpers *)
    (if r=1 then [(x, y+1)] else []) @
    (if b=1 then [(x+1, y)] else []));
 
-  fun is_valid width height x y = x>=0 andalso y>=0 andalso x<width andalso y<height;
+  fun is_valid width height x y = x>=0 andalso y>=0 andalso
+    x<width andalso y<height;
 
   (* valid - function is_valid with width height in closure already
   second argument - list of coords (int * int) list with coords of neighbors
@@ -98,7 +101,8 @@ local (* All maze functions helpers *)
   val it = false : bool
   *)
   fun has_way_out(_, []) = false
-  | has_way_out(valid, (x,y)::neighbors) = (not (valid x y)) orelse has_way_out(valid, neighbors);
+  | has_way_out(valid, (x,y)::neighbors) = (not (valid x y))
+    orelse has_way_out(valid, neighbors);
 
   (* As node consists of tuple (coords)*(neighbors coords list), this function
      returns neighbors coords list *)
@@ -159,6 +163,10 @@ local (* All maze functions helpers *)
   (* Given node returns all it's neighbor nodes in maze *)
   fun neighbors_of(node, maze) = assoc_mult(maze, node_neighbors(node));
 
+  fun neighbors_of_mult([], _) = []
+  | neighbors_of_mult(_, []) = []
+  | neighbors_of_mult(node::nodes, maze) = neighbors_of(node, maze)@neighbors_of_mult(nodes, maze);
+
   (* Check if exists path between two nodes
   Initializing:
   dest - destination node
@@ -175,22 +183,46 @@ local (* All maze functions helpers *)
       path(dest, (unvisited \ neighbors_of_node), edge @ neighbors_of_node)
     end;
 
-in
-  fun are_nighbours  ((_,_,1,_),(0,_,_,_)) = false
-  | are_nighbours ((_,_,0,_),(1,_,_,_)) = false
-  | are_nighbours ((_,_,_,1),(_,0,_,_)) = false
-  | are_nighbours ((_,_,_,0),(_,1,_,_)) = false
-  | are_nighbours _ = true;
+  fun tuple_prefix(_, []) = []
+  | tuple_prefix(prefix, x::xs) = (prefix, x)::tuple_prefix(prefix,xs);
 
-  fun is_valid_maze maze = rows_valid maze andalso rows_valid(transp(maze));
+  fun all_pairs_of [] = []
+  | all_pairs_of(x::xs) = tuple_prefix(x, xs) @ all_pairs_of(xs);
 
   fun path_2_points(src, dest, maze) = path(dest, remove(maze, src), [src]);
+
+  fun exit_maze_aux(_, []) = false
+  | exit_maze_aux([], _) = false
+  | exit_maze_aux(graph, (src, dest)::src_dest_pairs) =
+    path_2_points(src, dest,graph)>0 orelse exit_maze_aux(graph, src_dest_pairs);
+
+  fun neighbors_aux ((_,_,1,_),(0,_,_,_)) = false
+  | neighbors_aux ((_,_,0,_),(1,_,_,_)) = false
+  | neighbors_aux ((_,_,_,1),(_,0,_,_)) = false
+  | neighbors_aux ((_,_,_,0),(_,1,_,_)) = false
+  | neighbors_aux _ = true;
+
+in
+  fun are_nighbours(a,b) = neighbors_aux(a,b) andalso neighbors_aux(b,a);
+
+local
+  fun row_is_valid [] = true
+  | row_is_valid [x] = true
+  | row_is_valid(x1::x2::xs) = are_nighbours(x1,x2) andalso row_is_valid(x2::xs);
+
+  fun rows_valid [] = true
+  | rows_valid(x::xs) = row_is_valid x andalso rows_valid xs;
+in
+  fun is_valid_maze maze = rows_valid maze andalso rows_valid(transp(maze))
+end;
 
   fun exit_maze maze = let
     val graph = build_graph maze
     val pred = is_valid (length(hd(maze))) (length(maze))
     val exits = List.filter (fn x => has_way_out(pred, node_neighbors(x))) graph
   in
-    true (* TODO *)
+  (*TODO if maze invalid - false *)
+    exit_maze_aux(graph, all_pairs_of(exits))
   end;
+
 end;
