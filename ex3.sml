@@ -52,7 +52,7 @@ in
 end;
 
 
-local (* All maze functions helpers *)
+ (* All maze functions helpers *)
 
   fun transp ([]::_) = []
   | transp rows =
@@ -167,6 +167,18 @@ local (* All maze functions helpers *)
   | neighbors_of_mult(_, []) = []
   | neighbors_of_mult(node::nodes, maze) = neighbors_of(node, maze)@neighbors_of_mult(nodes, maze);
 
+(*
+2*2, 2 paths
+[((0,0),[(0,1),(1,0)]),((0,1),[(0,0),(1,1)]),
+ ((1,0),[(0,0),(1,1)]),((1,1),[(0,1),(1,0)])]
+
+3*3, 2 paths
+ [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[]),
+  ((1,1),[(0,1),(1,2),(2,1)]),((1,2),[(1,1),(2,2)]),((2,0),[]),
+  ((2,1),[(1,1),(2,2),(3,1)]),((2,2),[(1,2),(2,1),(2,3),(3,2)])]
+
+*)
+
   (* Check if exists path between two nodes
   Initializing:
   dest - destination node
@@ -176,11 +188,14 @@ local (* All maze functions helpers *)
   path(dest, remove(graph, src), [src]);
   Returns 1 if there's path between 2 points, 0 otherwise
   *)
-  fun path(_, _, []) = 0
-  | path(dest, unvisited, node::edge) = if node=dest then 1 else let
-      val neighbors_of_node = neighbors_of(node, unvisited)
+  fun path(_, _, [], acc) = acc
+  | path(dest, unvisited, node::edge, acc) =  let
+      val neighbors_of_all = neighbors_of_mult(node::edge, unvisited)
     in
-      path(dest, (unvisited \ neighbors_of_node), edge @ neighbors_of_node)
+    if node=dest then
+     path(dest, (unvisited \ neighbors_of_all), edge @ neighbors_of_all, acc+1)
+    else
+      path(dest, (unvisited \ neighbors_of_all), edge @ neighbors_of_all, acc)
     end;
 
   fun tuple_prefix(_, []) = []
@@ -189,12 +204,18 @@ local (* All maze functions helpers *)
   fun all_pairs_of [] = []
   | all_pairs_of(x::xs) = tuple_prefix(x, xs) @ all_pairs_of(xs);
 
-  fun path_2_points(src, dest, maze) = path(dest, remove(maze, src), [src]);
+  fun paths_num(src, dest, graph) = path(dest, remove(graph, src), [src],0);
 
   fun exit_maze_aux(_, []) = false
   | exit_maze_aux([], _) = false
   | exit_maze_aux(graph, (src, dest)::src_dest_pairs) =
-    path_2_points(src, dest,graph)>0 orelse exit_maze_aux(graph, src_dest_pairs);
+    paths_num(src, dest,graph)>0 orelse exit_maze_aux(graph, src_dest_pairs);
+
+    fun one_path_maze_aux(_, []) = 0
+    | one_path_maze_aux([], _) = 0
+    | one_path_maze_aux(graph, (src, dest)::src_dest_pairs) =
+      paths_num(src, dest, graph) + one_path_maze_aux(graph, src_dest_pairs);
+
 
   fun neighbors_aux ((_,_,1,_),(0,_,_,_)) = false
   | neighbors_aux ((_,_,0,_),(1,_,_,_)) = false
@@ -202,7 +223,6 @@ local (* All maze functions helpers *)
   | neighbors_aux ((_,_,_,0),(_,1,_,_)) = false
   | neighbors_aux _ = true;
 
-in
   fun are_nighbours(a,b) = neighbors_aux(a,b) andalso neighbors_aux(b,a);
 
 local
@@ -218,11 +238,18 @@ end;
 
   fun exit_maze maze = let
     val graph = build_graph maze
-    val pred = is_valid (length(hd(maze))) (length(maze))
+    val pred = is_valid (length(maze)) (length(hd(maze)))
     val exits = List.filter (fn x => has_way_out(pred, node_neighbors(x))) graph
   in
   (*TODO if maze invalid - false *)
     exit_maze_aux(graph, all_pairs_of(exits))
   end;
 
-end;
+  fun one_path_maze maze = let
+    val graph = build_graph maze
+    val pred = is_valid (length(maze)) (length(hd(maze)))
+    val exits = List.filter (fn x => has_way_out(pred, node_neighbors(x))) graph
+  in
+  (*TODO if maze invalid - false *)
+    one_path_maze_aux(graph, all_pairs_of(exits)) = 1
+  end;
