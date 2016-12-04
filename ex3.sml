@@ -61,9 +61,6 @@ fun all_rows_valid [] = true
 
 fun is_valid_maze maze = all_rows_valid maze andalso all_rows_valid(transp(maze));
 
-fun enumerate_from(_,[]) = []
-| enumerate_from (start_index, (x::xs)) = (x, start_index)::(enumerate_from(start_index+1, xs));
-
 (*
 x - line index, y - column index. Example:
 enumerate2d_row(0,0,["a","b","c"]);
@@ -72,7 +69,9 @@ val it = [((0,0),"a"),((0,1),"b"),((0,2),"c")] : ((int * int) * string) list
 fun enumerate2d_row(x,y,[]) = []
 | enumerate2d_row(x,y,l::ls) = ((x,y),l)::enumerate2d_row(x,y+1,ls);
 
-(* Takes 2d array, returns 1d array of tuple (row,col)*(data)
+(*
+x, y - starting indices
+Takes 2d array, returns 1d array of tuple (row,col)*(data)
 enumerate2d([["a","b","c"],["d","e","f"]]);
 val it =
   [((0,0),"a"),((0,1),"b"),((0,2),"c"),((1,0),"d"),((1,1),"e"),((1,2),"f")]
@@ -84,10 +83,10 @@ fun enumerate2d(_,_, []) = []
 
 
 (* l t r b = left top right bottom
-coords_room_to_neighbors((4,5), (1,0,0,1));
+coords_room_to_node((4,5), (1,0,0,1));
 val it = ((4,5),[(4,4),(5,5)]) : (int * int) * (int * int) list
  *)
-fun coords_room_to_neighbors((x,y), (l,t,r,b)) = ((x,y),
+fun coords_room_to_node((x,y), (l,t,r,b)) = ((x,y),
  (if l=1 then [(x, y-1)] else []) @
  (if t=1 then [(x-1, y)] else []) @
  (if r=1 then [(x, y+1)] else []) @
@@ -106,3 +105,65 @@ val it = false : bool
 *)
 fun has_way_out(_, []) = false
 | has_way_out(valid, (x,y)::neighbors) = (not (valid x y)) orelse has_way_out(valid, neighbors);
+
+fun node_neighbors(_, x) = x;
+fun node_coords(x, _) = x;
+
+(*
+val l =
+  [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[])]
+  : ((int * int) * (int * int) list) list
+- assoc(l, (0,1));
+val it = [(0,0),(1,1)] : (int * int) list
+*)
+fun assoc([], _) = []
+| assoc((x,y)::pairs, k) = if x=k then y else assoc(pairs,k);
+
+fun assoc_rem(lst, x) = List.filter (fn y => y<>x) lst;
+
+fun assoc_rem_mult([], _) = []
+| assoc_rem_mult(lst,[]) = lst
+| assoc_rem_mult(lst, x::xs) = assoc_rem_mult(assoc_rem(lst,x), xs);
+
+(* 1st - associated list, i.e. list of pairs. 2-nd - list of keys to look for
+Returns pairs of (key, value), not only values
+val l =
+  [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[])]
+  : ((int * int) * (int * int) list) list
+assoc_mult(l, [(0,0), (0,2)]);
+val it = [((0,0),[(~1,0),(0,1)]),((0,2),[(0,3)])]
+ : ((int * int) * (int * int) list) list
+*)
+fun assoc_mult([], _) = []
+| assoc_mult(_, []) = []
+| assoc_mult(pairs, k::ks) = let
+  val k_values = assoc(pairs,k)
+in
+    if null(k_values) then assoc_mult(pairs, ks) else
+    (k, k_values)::assoc_mult(pairs, ks)
+ end;
+
+
+
+(* Gets a maze and returns 1d list of (x,y)*(list of neighbors' coords)
+process [[(0,1,1,0),(1,0,0,1),(0,0,1,0)],[(0,0,0,0),(0,1,1,1),(1,0,0,1)],[(0,0,0,0),(0,1,0,1),(0,1,1,1)]];
+val it =
+  [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[]),
+   ((1,1),[(0,1),(1,2),(2,1)]),((1,2),[(1,1),(2,2)]),((2,0),[]),
+   ((2,1),[(1,1),(3,1)]),((2,2),[(1,2),(2,3),(3,2)])]
+  : ((int * int) * (int * int) list) list
+*)
+fun process matrix = (map coords_room_to_node)(enumerate2d(0,0,matrix));
+
+(* Given node returns all it's neighbor nodes in maze *)
+fun neighbors_of(node, maze) = assoc_mult(maze, node_neighbors(node));
+fun neighbors_of_mult([], _) = []
+| neighbors_of_mult(_, []) = []
+| neighbors_of_mult(node::nodes, maze) = neighbors_of(node, maze) @ neighbors_of_mult(nodes, maze)
+
+
+fun path(_, _, []) = 0
+| path(dest, unvisited, node::edge) = if node=dest then 1 else
+    path(dest, assoc_rem_mult(unvisited, neighbors_of(node, unvisited)), edge@neighbors_of(node, unvisited));
+
+fun path_2_points(src, dest, maze) = path(dest, assoc_rem(maze, src), [src]);
