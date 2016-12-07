@@ -193,11 +193,17 @@ local (* All maze functions helpers *)
   | all_pairs_of(x::xs) = (map (fn y => (x, y)) xs) @ all_pairs_of(xs);
 
   (* Counts total number of distinct paths in graph between all pairs of nodes
-  (source, destination) in src_dest_pairs list. Number of paths stored in acc *)
-  fun total_paths(_, [], acc) = acc
-  | total_paths([], _, _) = 0
-  | total_paths(graph, (src, dest)::src_dest_pairs, acc) =
-    total_paths(graph, src_dest_pairs, acc + paths_num_2_points(src, dest, graph));
+  (source, destination) in src_dest_pairs list. Number of paths stored in acc.
+  acc_max used  to stop function before finding all possible paths. In this case
+  acc_max will be returned *)
+  fun total_paths(_, [], acc, _) = acc
+  | total_paths([], _, _, _) = 0
+  | total_paths(graph, (src, dest)::src_dest_pairs, acc, acc_max) = let
+    val current_paths_num = acc + paths_num_2_points(src, dest, graph)
+  in
+    if acc >= acc_max then acc_max
+    else total_paths(graph, src_dest_pairs, current_paths_num, acc_max)
+  end;
 
   fun one_room_paths pred exits =
     length(List.filter (fn x => num_ways_out(pred, node_neighbors(x))>1) exits);
@@ -232,7 +238,7 @@ in
      val exits = List.filter (fn x => num_ways_out(pred, node_neighbors(x))>0) graph
    in
      is_valid_maze maze andalso
-     check(total_paths(graph, all_pairs_of exits, 0) + (one_room_paths pred exits))
+     check(total_paths(graph, all_pairs_of exits, 0, 2) + (one_room_paths pred exits))
    end;
   in
     fun exit_maze maze = check_paths_num (fn x => x>0) maze;
