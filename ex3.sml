@@ -4,7 +4,7 @@ local (* Part 1 helpers *)
 
   fun common_aux (common_x, max_occurences, []) = common_x
   | common_aux (common_x, max_occurences, x::xs) = let
-      val x_occurences = occurences(common_x, x::xs)
+      val x_occurences = occurences(x, x::xs)
     in
       if x_occurences > max_occurences then common_aux(x, x_occurences, xs)
       else common_aux(common_x, max_occurences, xs)
@@ -12,15 +12,14 @@ local (* Part 1 helpers *)
 
   (* Returns first continuous sequence (e.g. 5,6,7,8,9) in list
      Example: first_seq [1,3,4,5] = [1];
-              first_seq [1,2,3,1] = [1,2,3];
-  *)
+              first_seq [1,2,3,1] = [1,2,3];  *)
   (* TODO may extract x2=x1+1 *)
   fun first_seq [] = []
   | first_seq [x] = [x]
   | first_seq (x1::x2::xs) = if x2=x1+1 then x1::first_seq(x2::xs) else [x1];
 
-  (* Gets a list and splits it into list of sequences *)
-  (* Example:break_to_seq [1,2,3,1,2,2,3,4,5] = [[1,2,3],[1,2],[2,3,4,5]] *)
+  (* Gets a list and splits it into list of sequences
+     Example:break_to_seq [1,2,3,1,2,2,3,4,5] = [[1,2,3],[1,2],[2,3,4,5]] *)
   fun break_to_seq [] = []
   | break_to_seq lst = let
       val seq = first_seq lst
@@ -28,9 +27,9 @@ local (* Part 1 helpers *)
       seq::break_to_seq(List.drop(lst, length(seq)))
     end;
 
-  (* Gets some compare function, e.g. op< and a list *)
-  (* Returns maximal element according to definition of less *)
-  (* For example: max(op>, lst) will return minimal element *)
+  (* Gets some compare function, e.g. op< and a list
+     Returns maximal element according to definition of less
+     For example: max(op>, lst) will return minimal element *)
   fun max(_, [x]) = x
   | max(less, x::xs) = let
     val tail_largest = max(less,xs)
@@ -57,29 +56,24 @@ end;
 
 
 local (* All maze functions helpers *)
-
   (* Transpose 2d list *)
   fun transp ([]::_) = []
   | transp rows =
   (map hd rows) :: transp (map tl rows);
 
-  (*
-  x - line index, y - column index. Example:
+  (*  x - line index, y - column index. Example:
   enumerate2d_row(0,0,["a","b","c"]);
-  val it = [((0,0),"a"),((0,1),"b"),((0,2),"c")] : ((int * int) * string) list
-  *)
+  val it = [((0,0),"a"),((0,1),"b"),((0,2),"c")] : ((int * int) * string) list  *)
   fun enumerate2d_row(x,y,[]) = []
   | enumerate2d_row(x,y,l::ls) = ((x,y),l)::enumerate2d_row(x,y+1,ls);
 
-  (*
-  x, y - starting indices
+  (* x, y - starting indices
   Takes 2d array, returns 1d array of tuple (row,col)*(data)
   Example:
   enumerate2d([["a","b","c"],["d","e","f"]]);
   val it =
     [((0,0),"a"),((0,1),"b"),((0,2),"c"),((1,0),"d"),((1,1),"e"),((1,2),"f")]
-    : ((int * int) * string) list
-  *)
+    : ((int * int) * string) list  *)
   fun enumerate2d(_, _, []) = []
   | enumerate2d(x,y,row::rows) = enumerate2d_row(x, 0, row) @
     (enumerate2d(x+1,y,rows))
@@ -87,8 +81,7 @@ local (* All maze functions helpers *)
   (* Gets tuple of coords (x,y) and room (l,t,r,b) and converts it to node
   l t r b = left top right bottom
   coords_room_to_node((4,5), (1,0,0,1));
-  val it = ((4,5),[(4,4),(5,5)]) : (int * int) * (int * int) list
-   *)
+  val it = ((4,5),[(4,4),(5,5)]) : (int * int) * (int * int) list   *)
   fun coords_room_to_node((x,y), (l,t,r,b)) = ((x,y),
    (if l=1 then [(x, y-1)] else []) @
    (if t=1 then [(x-1, y)] else []) @
@@ -106,8 +99,7 @@ local (* All maze functions helpers *)
   num_ways_out(v, [(0,~1),(1,0)]); (* one of neighbors is outside - has way out *)
   val it = 1 : int
   - num_ways_out(v, [(0,2),(1,0)]); (* all neighbors inside - no way out *)
-  val it = 0 : int
-  *)
+  val it = 0 : int  *)
   fun num_ways_out(valid, neighbors) = length(List.filter (fn (x,y) => not (valid x y)) neighbors);
 
   (* As node consists of tuple (coords)*(neighbors coords list), this function
@@ -120,8 +112,7 @@ local (* All maze functions helpers *)
     [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[])]
     : ((int * int) * (int * int) list) list
   - assoc(l, (0,1));
-  val it = [(0,0),(1,1)] : (int * int) list
-  *)
+  val it = [(0,0),(1,1)] : (int * int) list  *)
   fun assoc([], _) = []
   | assoc((x,y)::pairs, k) = if x=k then y else assoc(pairs,k);
 
@@ -136,8 +127,7 @@ local (* All maze functions helpers *)
     : ((int * int) * (int * int) list) list
   assoc_mult(l, [(0,0), (0,2)]);
   val it = [((0,0),[(~1,0),(0,1)]),((0,2),[(0,3)])]
-   : ((int * int) * (int * int) list) list
-  *)
+   : ((int * int) * (int * int) list) list  *)
   fun assoc_mult([], _) = []
   | assoc_mult(_, []) = []
   | assoc_mult(pairs, k::ks) = let
@@ -160,8 +150,7 @@ local (* All maze functions helpers *)
     [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[]),
      ((1,1),[(0,1),(1,2),(2,1)]),((1,2),[(1,1),(2,2)]),((2,0),[]),
      ((2,1),[(1,1),(3,1)]),((2,2),[(1,2),(2,3),(3,2)])]
-    : ((int * int) * (int * int) list) list
-  *)
+    : ((int * int) * (int * int) list) list  *)
   fun build_graph matrix = (map coords_room_to_node)(enumerate2d(0,0,matrix));
 
   (* Given node returns all it's neighbor nodes in maze *)
@@ -180,8 +169,7 @@ local (* All maze functions helpers *)
       removed from unvisited nodes list. That way each neighbor of edge can be
       added few times, so we know in how many ways we can get to that node.
   Example: path(dest, remove(graph, src), [src]);
-  Returns 1 if there's path between 2 points, 0 otherwise
-  *)
+  Returns 1 if there's path between 2 points, 0 otherwise  *)
   fun path(_, _, [], acc) = acc
   | path(dest, unvisited, node::edge, acc) =  let
       val neighbors_of_all = neighbors_of_mult(node::edge, unvisited)
@@ -231,8 +219,8 @@ local (* All maze functions helpers *)
   fun rows_valid f maze = List.all (fn x => row_is_valid(f, x)) maze;
 
 in
-  fun are_nighbours(a,b) = neighb_lr(a,b) andalso neighb_lr(b,a) andalso
-    neighb_tb(a,b) andalso neighb_tb(b,a);
+  fun are_nighbours(a,b) = neighb_lr(a,b) orelse neighb_lr(b,a) orelse
+    neighb_tb(a,b) orelse neighb_tb(b,a);
 
   fun is_valid_maze maze = rows_valid neighb_lr maze andalso
     rows_valid neighb_tb (transp(maze));
