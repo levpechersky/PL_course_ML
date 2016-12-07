@@ -1,8 +1,8 @@
-print "-----------------------------------------------------------      ";
-print "Testing. Everything should return true, except for printing      ";
-print "-----------------------------------------------------------      ";
+val _ = print "----------------------------------------------\n";
+val _ = print "    Testing. Everything should return true    \n";
+val _ = print "----------------------------------------------\n";
 
-print "\nTests from assignment:      ";
+val _ = print "\nTests from assignment:\n";
 common ["PL", "PL", "is", "fun", "PL"] = "PL";
 sequence[1,2,3,4,1,5,5] = [1,2,3,4];
 thin [3,3,2,7,5,7,5] = [(3,2), (2,1), (7,2), (5, 2)];
@@ -17,26 +17,26 @@ one_path_maze[[(0,1,1,0), (1,0,1,0),(1,0,1,0)],[(0,0,0,0), (0,0,0,0),(0,0,0,0)],
 not (one_path_maze [[(0,1,1,0),(1,0,0,1),(0,0,1,0)],[(0,0,0,0),(0,1,1,1),(1,0,0,1)],[(0,0,0,0),(0,1,0,1),(0,1,1,1)]]);
 
 
-print "\nTests of common:      ";
+val _ = print "\nTests of common:\n";
 common ["forever alone"] = "forever alone";
 common ["hodor","hodor","hodor","hodor","hodor","hodor","hodor"] = "hodor";
 common [1,2,2,3,3,3,4,4,4,4,5,5,5,5,5] = 5;
 
 
-print "\nTests of sequence      ";
+val _ = print "\nTests of sequence\n";
 sequence [1,1,1,1,1,1,1] = [1];
 sequence [1,3,4,6,7,8,10,11,12,13] = [10,11,12,13];
 sequence [1,2,3,6,7,8] = [1,2,3]; (* ??? Not sure about this *)
 sequence [] = [];
 
 
-print "\nTests of thin:      ";
+val _ = print "\nTests of thin:\n";
 thin ["hodor","hodor","hodor","hodor","hodor","hodor","hodor"] = [("hodor", 7)];
 thin [] = [];
 thin [1] = [(1,1)];
 
 
-print "\nTests of are_nighbours:      ";
+val _ = print "\nTests of are_nighbours:\n";
 (* Super-legal neighbors (for any direction) *)
 (* Return true for each pair *)
 are_nighbours((0,0,0,0), (0,0,0,0));
@@ -108,7 +108,7 @@ in
 end;
 
 
-print "\nTests of is_valid_maze:      ";
+val _ = print "\nTests of is_valid_maze:\n";
 (* Valid mazes *)
 is_valid_maze [[(0,0,0,0)]];
 is_valid_maze [[(1,1,1,1)]];
@@ -124,7 +124,7 @@ not (is_valid_maze [[(0,1,1,0)],[(1,0,0,0)],[(1,0,0,1)],[(0,0,0,1)]]); (* 4x1 *)
 not (is_valid_maze [[(0,1,0,0),(1,1,1,0),(0,1,0,0)]]); (* 1x3 *)
 
 
-print "\nTests of exit_maze:      ";
+val _ = print "\nTests of exit_maze:\n";
 (* Mazes with exit *)
 exit_maze [[(1,1,1,1)]];
 (* All corners are 1-room in and out paths *)
@@ -144,7 +144,7 @@ exit_maze [[(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0
     		   [(0,1,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,0,1)],
     		   [(0,0,1,1),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,0,1,0),(1,1,0,0)]];
 
-print "Wait for it... This may take a while.     ";
+val _ = print "Wait for it... This may take a while.\n";
 (* This one may take too long. I have never got this to end. *)
 (*
 exit_maze [[(1,1,1,1),(1,1,1,1),(1,1,1,1),(1,1,1,1),(1,1,1,1),(1,1,1,1),(1,1,1,1),(1,1,1,1),(1,1,1,1),(1,1,1,1)],
@@ -195,7 +195,7 @@ not (exit_maze [[(0,1,1,0)],[(1,0,0,0)],[(1,0,0,1)],[(0,0,0,1)]]); (* 4x1 *)
 not (exit_maze [[(0,1,0,0),(1,1,1,0),(0,1,0,0)]]); (* 1x3 *)
 
 
-print "\nTests of one_path_maze:      ";
+val _ = print "\nTests of one_path_maze:\n";
 (* According to Rana paths are distinct, if they are different by at least one room. *)
 (* Same invalid mazes from valid_maze. Hence, one_path_maze returns false *)
 not (one_path_maze [[(0,1,1,0),(1,1,0,0)],[(1,0,0,1),(1,1,0,0)],[(0,1,1,1),(1,1,0,0)],[(0,1,0,0),(0,0,0,1)]]); (* 4x2 *)
