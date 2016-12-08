@@ -108,11 +108,8 @@ local (* All maze functions helpers *)
 
   (* Given associated list and a key returns value of that key, or empty list if
      key doesn't exist.
-  val l =
-    [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[])]
-    : ((int * int) * (int * int) list) list
-  - assoc(l, (0,1));
-  val it = [(0,0),(1,1)] : (int * int) list  *)
+  val l = [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[])]
+  assoc(l, (0,1)) => [(0,0),(1,1)]  *)
   fun assoc([], _) = []
   | assoc((x,y)::pairs, k) = if x=k then y else assoc(pairs,k);
 
@@ -122,12 +119,8 @@ local (* All maze functions helpers *)
   (* Given associated list and list of keys returns list of pairs with those keys
   1st - associated list, i.e. list of pairs. 2-nd - list of keys to look for
   Returns pairs of (key, value), not only values
-  val l =
-    [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[])]
-    : ((int * int) * (int * int) list) list
-  assoc_mult(l, [(0,0), (0,2)]);
-  val it = [((0,0),[(~1,0),(0,1)]),((0,2),[(0,3)])]
-   : ((int * int) * (int * int) list) list  *)
+  val l = [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[])]
+  assoc_mult(l, [(0,0), (0,2)]) => [((0,0),[(~1,0),(0,1)]),((0,2),[(0,3)])]  *)
   fun assoc_mult([], _) = []
   | assoc_mult(_, []) = []
   | assoc_mult(pairs, k::ks) = let
@@ -149,8 +142,7 @@ local (* All maze functions helpers *)
   val it =
     [((0,0),[(~1,0),(0,1)]),((0,1),[(0,0),(1,1)]),((0,2),[(0,3)]),((1,0),[]),
      ((1,1),[(0,1),(1,2),(2,1)]),((1,2),[(1,1),(2,2)]),((2,0),[]),
-     ((2,1),[(1,1),(3,1)]),((2,2),[(1,2),(2,3),(3,2)])]
-    : ((int * int) * (int * int) list) list  *)
+     ((2,1),[(1,1),(3,1)]),((2,2),[(1,2),(2,3),(3,2)])]  *)
   fun build_graph matrix = (map coords_room_to_node)(enumerate2d(0,0,matrix));
 
   (* Given node returns all it's neighbor nodes in maze *)
@@ -164,20 +156,20 @@ local (* All maze functions helpers *)
 
   (* Check how many paths exist between two nodes.
   Initializing: dest - destination node, unvisited - all but source node,
-      node::edge - list of source node only, acc - initial number of paths, 0.
-  Each iteration all neighbors of all edge nodes are added to edge and
-      removed from unvisited nodes list. That way each neighbor of edge can be
+      node::open_list - list of source node only, acc - initial number of paths, 0.
+  Each iteration all neighbors of all open_list nodes are added to open_list and
+      removed from unvisited nodes list. That way each neighbor of open_list can be
       added few times, so we know in how many ways we can get to that node.
   Example: path(dest, remove(graph, src), [src]);
   Returns 1 if there's path between 2 points, 0 otherwise  *)
   fun path(_, _, [], acc) = acc
-  | path(dest, unvisited, node::edge, acc) =  let
-      val neighbors_of_all = neighbors_of_mult(node::edge, unvisited)
+  | path(dest, unvisited, open_list, acc) =  let
+      val dest_reached = length(List.filter (fn x => x = dest) (open_list))
+      val next_open_list = neighbors_of_mult(remove(open_list, dest), unvisited)
   in
-    if node=dest then
-     path(dest, (unvisited \ neighbors_of_all), edge @ neighbors_of_all, acc+1)
-    else
-      path(dest, (unvisited \ neighbors_of_all), edge @ neighbors_of_all, acc)
+    if dest_reached > 0 then
+      path(dest, dest::(unvisited \ next_open_list), next_open_list, acc+dest_reached)
+    else path(dest, (unvisited \ next_open_list), next_open_list, acc)
   end;
 
   (* Wrapper for path function (it needs to be called in very special order).
@@ -186,9 +178,7 @@ local (* All maze functions helpers *)
   fun paths_num_2_points(src, dest, graph) = path(dest, remove(graph, src), [src], 0);
 
   (* Given list of unique items returns list of all unique pairs (unlike cross-product).
-  Example:
-  all_pairs_of [1,2,3,4];
-  val it = [(1,2),(1,3),(1,4),(2,3),(2,4),(3,4)] : (int * int) list  *)
+  Example:  all_pairs_of [1,2,3,4] => [(1,2),(1,3),(1,4),(2,3),(2,4),(3,4)] *)
   fun all_pairs_of [] = []
   | all_pairs_of(x::xs) = (map (fn y => (x, y)) xs) @ all_pairs_of(xs);
 
@@ -218,11 +208,14 @@ local (* All maze functions helpers *)
   | neighb_tb ((_,_,_,0),(_,1,_,_)) = false
   | neighb_tb _ = true;
 
+  (* neighb_test is a function receiveing two rooms and returning true if
+  those rooms are valid neighbors *)
   fun row_is_valid(_, []) = true
   | row_is_valid (_, [x]) = true
-  | row_is_valid(test, x1::x2::xs) = test(x1,x2) andalso row_is_valid(test, x2::xs);
+  | row_is_valid(neighb_test, x1::x2::xs) =
+      neighb_test(x1,x2) andalso row_is_valid(neighb_test, x2::xs);
 
-  fun rows_valid f maze = List.all (fn x => row_is_valid(f, x)) maze;
+  fun rows_valid neighb_test maze = List.all (fn x => row_is_valid(neighb_test, x)) maze;
 
 in
   fun are_nighbours(a,b) = neighb_lr(a,b) orelse neighb_lr(b,a) orelse
