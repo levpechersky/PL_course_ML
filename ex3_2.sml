@@ -55,7 +55,6 @@ in
 end;
 
 
-
 local (* All maze functions helpers *)
   (* Transpose 2d list *)
   fun transp ([]::_) = []
@@ -147,7 +146,7 @@ local (* All maze functions helpers *)
   fun build_graph matrix = (map coords_room_to_node)(enumerate2d(0,0,matrix));
 
   (* Given node returns all it's neighbor nodes in maze *)
-  fun neighbors_of(node, maze) = assoc_mult(maze, node_neighbors(node));
+  fun neighbors_of(node, graph) = assoc_mult(graph, node_neighbors(node));
 
   (* Returns all neighbors of all nodes in node::nodes. Contains duplicates, if
   some nodes have common neighbor *)
@@ -183,6 +182,10 @@ local (* All maze functions helpers *)
   fun all_pairs_of [] = []
   | all_pairs_of(x::xs) = (map (fn y => (x, y)) xs) @ all_pairs_of(xs);
 
+(*TODO consider refactor *)
+  fun non_simple graph src dest = if length(node_neighbors src)>2 then 1 else
+    (if src=dest then 0 else (non_simple (remove(graph, src)) (hd(neighbors_of(src, graph))) dest))
+
   (* Counts total number of distinct paths in graph between all pairs of nodes
   (source, destination) in src_dest_pairs list. Number of paths stored in acc.
   acc_max used  to stop function before finding all possible paths. In this case
@@ -190,14 +193,20 @@ local (* All maze functions helpers *)
   fun total_paths(_, [], acc, _) = acc
   | total_paths([], _, _, _) = 0
   | total_paths(graph, (src, dest)::src_dest_pairs, acc, acc_max) = let
-    val current_paths_num = acc + paths_num_2_points(src, dest, graph)
+    val src_dest_paths_num = paths_num_2_points(src, dest, graph)
+    val non_simple_path_num = if src_dest_paths_num=0 then 0 else (non_simple graph src dest)(* TODO consider refactor *)
+    val current_paths_num = acc + src_dest_paths_num + non_simple_path_num
   in
     if acc >= acc_max then acc_max
     else total_paths(graph, src_dest_pairs, current_paths_num, acc_max)
   end;
 
-  fun one_room_paths pred exits =
-    length(List.filter (fn x => num_ways_out(pred, node_neighbors(x))>1) exits);
+  fun one_room_paths pred exits = let
+    val one_room_simple = List.filter (fn x => num_ways_out(pred, node_neighbors(x))>1) exits
+    val not_simple_filter = fn x => length(node_neighbors(x))-num_ways_out(pred, node_neighbors(x))>0
+  in
+    length(one_room_simple) + length(List.filter not_simple_filter one_room_simple)
+  end;
 
   (* neighb_lr(x,y) checks whether room x is a valid neighbor of y from the left *)
   fun neighb_lr ((_,_,1,_),(0,_,_,_)) = false
@@ -217,7 +226,6 @@ local (* All maze functions helpers *)
       neighb_test(x1,x2) andalso row_is_valid(neighb_test, x2::xs);
 
   fun rows_valid neighb_test maze = List.all (fn x => row_is_valid(neighb_test, x)) maze;
-
 in
   fun are_nighbours(a,b) = neighb_lr(a,b) orelse neighb_lr(b,a) orelse
     neighb_tb(a,b) orelse neighb_tb(b,a);
@@ -238,5 +246,4 @@ in
     fun exit_maze maze = check_paths_num (fn x => x>0) maze;
     fun one_path_maze maze = check_paths_num (fn x => x=1) maze;
  end
-
-end;
+end
