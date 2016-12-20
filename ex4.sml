@@ -10,32 +10,51 @@ fun cmp a b = if a<b then LESS else (if a>b then GREATER else EQUAL);
 
 fun max (a, b) = if a>b then a else b;
 
-fun root_is_black Nil = true
-| root_is_black (Br((_,_,c), _, _)) = c=BLACK;
+fun height Nil = 0
+| height (Br(_, l, r)) = 1 + max(height l, height r)
 
-fun all_leaves_black Nil = true
-| all_leaves_black (Br((_,_,RED), Nil, Nil)) = false
-| all_leaves_black (Br((_,_,_), l, r)) = all_leaves_black l andalso all_leaves_black r;
-
-fun red's_children_black Nil = true
-| red's_children_black (Br((_,_,RED), l, r)) =
-    root_is_black l andalso root_is_black r andalso
-    red's_children_black l andalso red's_children_black r
-| red's_children_black (Br((_,_,BLACK), l, r)) =
-    red's_children_black l andalso red's_children_black r;
 
 fun black_height Nil = 0
 | black_height (Br((_,_,BLACK), l, r)) = 1 + max(black_height l, black_height r)
 | black_height (Br((_,_,RED), l, r)) = max(black_height l, black_height r);
 
-fun black_height_equal Nil = true
-| black_height_equal (Br(_, l, r)) = black_height l = black_height r;
+local
+  local
+    fun keys_inorder Nil=[]
+    | keys_inorder (Br((k,_,_), l, r)) = (keys_inorder l) @ [k] @ (keys_inorder r)
 
-fun is_rbtree Nil = true
-| is_rbtree tree = root_is_black tree andalso
-    all_leaves_black tree andalso
-    red's_children_black tree andalso
-    black_height_equal tree;
+    fun increasing_seq [] = true
+    | increasing_seq [x] = true
+    | increasing_seq (x1::x2::xs) = x2>x1 andalso increasing_seq(x2::xs);
+  in
+    fun is_BST Nil = true
+    | is_BST tree = increasing_seq (keys_inorder tree)
+  end;
+
+  fun is_balanced Nil = true
+  | is_balanced (Br(_, l, r)) = is_balanced l andalso is_balanced r andalso
+      abs(height l - height r)<2
+
+  fun root_is_black Nil = true
+  | root_is_black (Br((_,_,c), _, _)) = c=BLACK;
+
+  fun all_leaves_black Nil = true
+  | all_leaves_black (Br((_,_,RED), Nil, Nil)) = false
+  | all_leaves_black (Br((_,_,_), l, r)) = all_leaves_black l andalso all_leaves_black r;
+
+  fun red's_children_black Nil = true
+  | red's_children_black (Br((_,_,RED), l, r)) =
+      root_is_black l andalso root_is_black r andalso red's_children_black l andalso red's_children_black r
+  | red's_children_black (Br((_,_,BLACK), l, r)) = red's_children_black l andalso red's_children_black r;
+
+  fun black_height_equal Nil = true
+  | black_height_equal (Br(_, l, r)) = black_height l = black_height r;
+in
+  fun is_rbtree Nil = true
+  | is_rbtree tree = foldl (fn(f, acc) => f tree andalso acc) true
+      [is_BST, is_balanced, root_is_black, all_leaves_black, red's_children_black,
+       black_height_equal]
+end;
 
 fun size Nil = 0
 | size (Br(_, l, r)) = 1 + size l + size r;
@@ -51,6 +70,28 @@ fun get (Nil, _) = raise NotFound
 | get (Br((k,v,c),l,r), key) = case cmp key k of
     EQUAL => (v,c) | GREATER => get (r, key) | LESS => get (l, key)
 
+local
+  fun BF Nil = 0 | BF (Br(_, l, r)) = height l - height r;
+
+  fun necessary_roll Nil = NONE
+  | necessary_roll (Br(node, l, r)) =  case BF (Br(node, l, r)) of
+       2 => if BF l >= 0 then SOME LL else SOME LR
+    | ~2 => if BF r <= 0 then SOME RR else SOME RL
+    | _ => NONE; (* Assuming tree was balanced before *)
+
+  (* webcourse.cs.technion.ac.il/234218/Winter2016-2017/ho/WCFiles/Recitation%205%20-%20AVL.pdf Slide 9*)
+  fun roll(tree, NONE) = tree
+  | roll(Br(b, Br(a, ll, lr), r), SOME LL) = Br(a, ll, Br(b, lr, r))
+  | roll(Br(c, Br(b, ll, Br(a, lrl, lrr)), r), SOME LR) = Br(a, Br(b, ll, lrl), Br(c, lrr, r))
+  | roll(Br(a, l, Br(b, rl, rr)), SOME RR) = Br(b, Br(a, l, rl), rr)
+  | roll(Br(c, l, Br(b, Br(a, rll, rlr), rr)), SOME RL) = Br(a, Br(c, l, rll), Br(b, rlr, rr));
+in
+  fun insert (Nil, node) = Br(node, Nil, Nil)
+  | insert (Br((k,v,c),l,r), (key,value,color)) = case cmp key k of
+      EQUAL => Br((k,value,c),l,r)
+    | GREATER => Br((k,v,c), l,  insert(r, (key, value, color)))
+    | LESS =>    Br((k,v,c), insert(l, (key, value, color)),  r)
+end;
 
 (*
 Serialization:
@@ -89,6 +130,9 @@ Tag (per bits):
   fun substr(s, from, to) = if from>to then ""
       else str(String.sub(s,from)) ^ substr(s, from+1, to);
 
+  fun fill_list(_, 0) = []
+  | fill_list(init, n) = init :: fill_list(init, n-1);
+
   (* Checks how many bytes needed to store x, with no respect to sign *)
   fun bytes_needed x = if (abs x)<256 then 1 else 1 + bytes_needed (x div 256);
 
@@ -100,7 +144,7 @@ Tag (per bits):
   (* Convert number of bytes to tag format *)
   fun bytes_num_tag n = if n>=0 andalso n<=4 then n-1 else raise LSerialError;
 
-  (* Gets a tag - single char containing all node metadata *)
+  (* Gets a node tag - single char containing all node metadata *)
   fun unpack_tag c = let
     val tag = ord c
     val color = case tag mod 4 of 1 => BLACK | 2 => RED | _ => raise LSerialError
@@ -122,15 +166,12 @@ Tag (per bits):
     chr(t_color + 4*t_k_bytes + 16*t_v_bytes + 64*t_k_sign + 128*t_v_sign)
   end;
 
-  (* Gets a tag - single char containing all node metadata
+  (* Gets a Nil tag - single char containing all node metadata
      Returns number of bytes where number of consequtive Nil nodes stored *)
   fun unpack_nil_tag c = (((ord c) div 16) mod 4) + 1;
 
-  (* As explained before, 3 is tag of Nil node *)
+  (* As explained before, 3 is code of Nil node *)
   fun pack_nil_tag len_bytes = chr(3 + (bytes_num_tag len_bytes)*4);
-
-  fun fill_list(_, 0) = []
-  | fill_list(init, n) = init :: fill_list(init, n-1);
 
   (* Works with positive values only, sign lost when zipping *)
   local
@@ -163,8 +204,7 @@ Tag (per bits):
     fun complete_bfs tree = c_bfs_aux [tree] [tree]
   end;
 
-  fun tree2node Nil = NONE
-  | tree2node (Br(node,_,_)) = SOME node;
+  fun tree2node Nil = NONE | tree2node (Br(node,_,_)) = SOME node;
 
   fun pack_node (k,v,c) = let
     val k_bytes = bytes_needed k
@@ -225,7 +265,10 @@ Tag (per bits):
       | EMPTY => [NONE]
     end;
 
-    fun break_to_levels bfs_list 
+    (* TODO Check if there's enough elements to take *)
+    fun break_to_levels([], _, acc) = acc
+    | break_to_levels(list, level_width, acc) = break_to_levels
+    (List.drop(list, level_width), 2*level_width, acc @ [List.take(list, level_width)]);
 
 (*in*)
 
@@ -238,91 +281,4 @@ use "ex4_test.sml";
 map tree2node (complete_bfs rb_test_int);
 encode rb_test_int;
 decode it;
-*)
-
-
-(*OLD
-
-fun encode Nil = "\^@"
-| encode tree = let
-  val k_bytes = bytes_needed (abs_max_key tree)
-  val v_bytes = bytes_needed (abs_max_value tree)
-  val zip_n = zip_node k_bytes v_bytes
-  val stream = map zip_n (map tree2node (complete_bfs tree))
-  (* TODO compress nulls, drop last nulls *)
-in
-  str(chr k_bytes) ^ str(chr v_bytes) ^ (foldl op^ "" stream)
-end;
-
-fun decode "\^@" = Nil
-| decode s = let
-  val k_bytes = ord(String.sub(s,0))
-  val v_bytes = ord(String.sub(s,1))
-  val unzip_n = unzip_node k_bytes v_bytes
-  val first_node_of = take_1st_node k_bytes v_bytes
-  val stream = substr(s, 2, String.size(s)-1)
-in
-  Br((unzip_n (first_node_of stream)), Nil, Nil) (* TODO now decodes only root*)
-end;
-
-
-fun zip_node node = case node of NONE => "N" |
-  SOME((k,v,c)) => let
-  val tag = pack_tag(k div (abs k), v div (abs v), c)
-in
-  str(tag) ^ zip_int k_bytes (abs k) ^ zip_int v_bytes (abs v)
-end;
-
-fun unzip_node k_bytes v_bytes s = let
-  val (k_sign, v_sign, color) = unpack_tag(String.sub(s, 0))
-  val key = (unzip_int k_bytes (substr(s, 1, k_bytes))) * k_sign
-  val value = (unzip_int v_bytes (substr(s, k_bytes+1, k_bytes+v_bytes))) * v_sign
-in
-  (key, value, color)
-end;
-
-fun zip_nils [] = ""
-| zip_nils lst = let
-  val len = length lst
-  val bytes = bytes_needed len
-in
-  str(pack_nil_tag bytes) ^ (zip_int bytes len)
-end;
-
-fun unzip_nils "" = []
-| unzip_nils s = let
-  val bytes = unpack_nil_tag(String.sub(s, 0))
-  val len = unzip_int bytes (substr(s, 1, bytes))
-in
-  fill_list(Nil, len)
-end;
-
-fun abs_max_key Nil = 0
-| abs_max_key (Br((k,_,_),l,r)) = max(abs k, max(abs_max_key l, abs_max_key r));
-
-(* Only for int RB-trees *)
-fun abs_max_value Nil = 0
-| abs_max_value (Br((_,v,_),l,r)) = max(abs v, max(abs_max_value l, abs_max_value r));
-
-(* Credit to Snir Cohen. Returns true if (f arg) throws exception exp *)
-fun test f arg exp =
-let
-  val res = SOME (f arg) handle exp => NONE
-in
-  case res of
-       NONE => true
-     | SOME _ => false
-end;
-
-fun is_node_tag c = not (test unpack_tag c LSerialError);
-fun is_nil_tag c = not (test unpack_nil_tag c LSerialError);
-
-(* TODO handle all nil cases *)
-fun take_1st_node k_bytes v_bytes stream = let
-    val c = String.sub(stream, 0)
-  in
-    if is_node_tag c then substr(stream, 0, k_bytes + v_bytes) else
-    (if is_nil_tag c then substr(stream, 0, unpack_nil_tag(c)) else raise LSerialError)
-  end;
-
 *)

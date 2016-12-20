@@ -61,4 +61,8 @@ get (rb_test, 27) = ("27", RED);
 val _ = print "\ntest of postorder:\n";
 postorder rb_test = ["6","1","11","8","15","22","27","25","17","13"];
 
+val _ = print "\ntest of insert:\n";
+insert(Nil, (15, "0015", BLACK));
+insert(it, (10, "0010", BLACK));
+
 val _ = print "\nDone.\n";
