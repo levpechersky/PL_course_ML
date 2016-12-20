@@ -59,10 +59,12 @@ end;
 fun size Nil = 0
 | size (Br(_, l, r)) = 1 + size l + size r;
 
+(* Counts all black nodes *)
 fun blacks Nil = 0
 | blacks (Br((_,_,BLACK), l, r)) = 1 + blacks l + blacks r
 | blacks (Br((_,_,RED), l, r)) = blacks l + blacks r;
 
+(* Postorder of values *)
 fun postorder Nil = []
 | postorder (Br((_,v,_),l,r)) = (postorder l) @ (postorder r) @ [v];
 
@@ -130,10 +132,13 @@ Tag (per bits):
   fun substr(s, from, to) = if from>to then ""
       else str(String.sub(s,from)) ^ substr(s, from+1, to);
 
+  (* Returns list of length n, filled with value init *)
   fun fill_list(_, 0) = []
   | fill_list(init, n) = init :: fill_list(init, n-1);
 
-  (* Checks how many bytes needed to store x, with no respect to sign *)
+  (* Checks how many bytes needed to store x, with no respect to sign.
+     For example, bytes_needed 255 = 1, bytes_needed 12345 = 2
+     Returns value in range 1..4 *)
   fun bytes_needed x = if (abs x)<256 then 1 else 1 + bytes_needed (x div 256);
 
   fun tag_type c = case (ord c) mod 4 of
@@ -141,10 +146,12 @@ Tag (per bits):
     | 3 => NIL_TAG
     | _ => NODE_TAG;
 
-  (* Convert number of bytes to tag format *)
+  (* Convert number of bytes to tag format. Number of bytes must be in range 1..4,
+     since we work with int *)
   fun bytes_num_tag n = if n>=0 andalso n<=4 then n-1 else raise LSerialError;
 
-  (* Gets a node tag - single char containing all node metadata *)
+  (* Gets a node tag - single char containing all node metadata, and
+     returns it in readable format. *)
   fun unpack_tag c = let
     val tag = ord c
     val color = case tag mod 4 of 1 => BLACK | 2 => RED | _ => raise LSerialError
@@ -245,6 +252,7 @@ Tag (per bits):
     | encode tree = foldl op^ "" (pack_all(map tree2node (complete_bfs tree), [], 0))
   end;
 
+  local
     fun unpack_all("", acc) = acc
     | unpack_all(stream, acc) = let
       val tag = String.sub(stream, 0)
@@ -265,11 +273,36 @@ Tag (per bits):
       | EMPTY => [NONE]
     end;
 
-    (* TODO Check if there's enough elements to take *)
+    (* Returns list of lists of SOME nodes or NONE, where lists of lists are
+       levels of the decoded tree from bottom to root. If there are missing
+       nodes at bottom level, necessary number of NONE will be added to that level.
+       I.e. each list is of length of power of 2 *)
     fun break_to_levels([], _, acc) = acc
-    | break_to_levels(list, level_width, acc) = break_to_levels
-    (List.drop(list, level_width), 2*level_width, acc @ [List.take(list, level_width)]);
+    | break_to_levels(list, level_width, acc) = let
+      val missing_n = level_width - length list
+      val current_level = if missing_n < 0 then List.take(list, level_width)
+        else list @ fill_list(NONE, missing_n)
+      val rest = if missing_n < 0 then List.drop(list, level_width) else []
+    in
+      break_to_levels (rest, 2*level_width, current_level::acc)
+    end;
 
+    fun build_level([], []) = []
+    | build_level([], NONE::top) =  Nil::build_level([], top)
+    | build_level([], (SOME node)::top) = (Br(node,Nil,Nil))::build_level([], top)
+    | build_level(_::_::bottom, NONE::top) = Nil::build_level(bottom, top)
+    | build_level(l::r::bottom, (SOME node)::top) = (Br(node,l,r))::build_level(bottom, top)
+
+    fun build_tree ([], acc) = acc
+    | build_tree (level::levels, acc) = build_tree(levels, build_level(acc, level))
+  in
+    fun decode "\^@" = Nil
+    | decode stream = let
+      val tree_levels = break_to_levels(unpack_all(stream, []), 1, [])
+    in
+      hd (build_tree(tree_levels, []))
+    end
+  end;
 (*in*)
 
 
@@ -278,7 +311,6 @@ Tag (per bits):
 (*
 use "ex4.sml";
 use "ex4_test.sml";
-map tree2node (complete_bfs rb_test_int);
 encode rb_test_int;
 decode it;
 *)
